@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-color-bg text-color-text antialiased;
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply max-w-1440 mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}

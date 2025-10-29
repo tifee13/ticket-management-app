@@ -119,29 +119,29 @@
 
             signupForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
                 const formData = new FormData(signupForm);
                 const name = formData.get('name');
                 const email = formData.get('email');
                 const password = formData.get('password');
 
                 if (!validateForm(name, email, password)) {
+                    window.showToast('Please fix the errors in the form.', 'error');
                     return;
                 }
 
                 try {
-                    // Sign up first
                     await auth.signup(email, password, name);
-                    showToast('Account created successfully!', 'success');
                     
-                    // Redirect to dashboard after successful signup
-                    window.location.href = '/dashboard';
+                    // Get redirect URL from query parameters
+                    const queryParams = new URLSearchParams(window.location.search);
+                    const redirectUrl = queryParams.get('redirect') || '/dashboard';
+
+                    window.showToast('Account created successfully!', 'success');
+                    window.location.href = redirectUrl;
+
                 } catch (error) {
-                    if (error.message === 'User already exists.') {
-                        showError(emailError, 'This email is already registered.');
-                    } else {
-                        showToast(error.message || 'Signup failed. Please try again.', 'error');
-                    }
+                    // --- USE THE NEW GLOBAL HANDLER ---
+                    auth.handleApiError(error, 'Signup failed. Please retry.');
                 }
             });
 

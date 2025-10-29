@@ -1,340 +1,207 @@
 {% extends "base.twig" %}
+{% set requiresAuth = true %}
 
 {% block title %}Manage Tickets - Fix & Fast{% endblock %}
 
 {% block content %}
-    <div class="space-y-8 p-6">
-        <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
-            <h1 class="text-5xl font-bold text-[#4B0082]">Manage Tickets</h1>
-            <button
-                id="createTicketBtn"
-                class="px-6 py-3 bg-[#e498d1ff] text-[#FFFFFF] rounded-lg font-semibold hover:opacity-80 w-full md:w-auto"
-            >
-                Create New Ticket
-            </button>
-        </div>
+<div class="space-y-8">
+  <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
+    <h1 class="text-5xl font-bold text-[#4B0082]">Manage Tickets</h1>
+    <button
+      id="createTicketBtn"
+      class="px-6 py-3 bg-[#e498d1ff] text-white rounded-lg font-semibold hover:opacity-80 w-full md:w-auto"
+    >
+      Create New Ticket
+    </button>
+  </div>
 
-        <div class="flex flex-col md:flex-row gap-4 p-4 bg-[#FFFFFF] rounded-lg shadow">
-            <div class="flex-1">
-                <label for="search" class="sr-only">Search Tickets</label>
-                <input
-                    type="text"
-                    id="search"
-                    placeholder="Search by title or description..."
-                    class="w-full px-4 py-3 border border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
-                />
-            </div>
-            <div class="w-full md:w-1/4">
-                <label for="statusFilter" class="sr-only">Filter by Status</label>
-                <select
-                    id="statusFilter"
-                    class="w-full px-4 py-3 border border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
-                >
-                    <option value="all">All Statuses</option>
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="closed">Closed</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="ticketsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Loading state will be replaced by actual tickets -->
-        </div>
-
-        <!-- No tickets message -->
-        <div id="noTicketsMessage" class="hidden text-center py-10">
-            <p class="text-lg text-gray-500">No tickets found.</p>
-            <button onclick="window.showCreateTicketModalComponent()" 
-                    class="mt-4 px-6 py-2 bg-[#e498d1ff] text-[#FFFFFF] rounded-lg font-semibold hover:opacity-80">
-                Create Your First Ticket
-            </button>
-        </div>
+  <div class="flex flex-col md:flex-row gap-4 p-4 bg-white rounded-lg shadow">
+    <div class="flex-1">
+      <input
+        type="text"
+        id="search"
+        placeholder="Search by title or description..."
+        class="w-full px-4 py-3 border border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
+      />
     </div>
-
-    {# Include Create Ticket Component #}
-    {% include 'components/createticket.twig' %}
-    
-    {# Edit Ticket Modal #}
-    <div id="editTicketModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-        <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-[#4B0082]">Edit Ticket</h2>
-                <button class="text-gray-500 hover:text-gray-700" id="closeEditModalBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <form id="editTicketForm" class="space-y-4">
-                <input type="hidden" id="editTicketId" name="id">
-                <div>
-                    <label for="editTitle" class="block text-sm font-medium text-gray-700">Title</label>
-                    <input type="text" id="editTitle" name="title" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]">
-                </div>
-                <div>
-                    <label for="editDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea id="editDescription" name="description" rows="4" required
-                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]"></textarea>
-                </div>
-                <div>
-                    <label for="editPriority" class="block text-sm font-medium text-gray-700">Priority</label>
-                    <select id="editPriority" name="priority" required
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="editStatus" class="block text-sm font-medium text-gray-700">Status</label>
-                    <select id="editStatus" name="status" required
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]">
-                        <option value="open">Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="closed">Closed</option>
-                    </select>
-                </div>
-                <button type="submit" id="editTicketSubmit"
-                        class="w-full px-4 py-2 bg-[#e498d1ff] text-white rounded-lg font-semibold hover:opacity-80">
-                    Update Ticket
-                </button>
-            </form>
-        </div>
+    <div class="w-full md:w-1/4">
+      <select
+        id="statusFilter"
+        class="w-full px-4 py-3 border border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
+      >
+        <option value="all">All Statuses</option>
+        <option value="open">Open</option>
+        <option value="in_progress">In Progress</option>
+        <option value="closed">Closed</option>
+      </select>
     </div>
+  </div>
+
+  <div id="ticketsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <p class="text-gray-500">Loading tickets...</p>
+  </div>
+
+  <div id="noTicketsMessage" class="hidden text-center py-10">
+    <p class="text-lg text-gray-500">No tickets found.</p>
+    <button
+      onclick="window.showCreateTicketModalComponent()"
+      class="mt-4 px-6 py-2 bg-[#e498d1ff] text-white rounded-lg font-semibold hover:opacity-80"
+    >
+      Create Your First Ticket
+    </button>
+  </div>
+</div>
+
+{% include 'components/createticket.twig' %}
+{% include 'components/editticket.twig' %}
 {% endblock %}
 
 {% block scripts %}
-    {{ parent() }}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.30.0/date-fns.min.js"></script>
-    <script>
-        // Local Storage Management
-        // Use the same ticket key as the auth service to keep data consistent
-        const STORAGE_KEY = 'ticketapp_tickets';
+{{ parent() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.30.0/date-fns.min.js"></script>
 
-        function getTickets() {
-            const currentUser = auth.getCurrentUser() || {};
-            const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            // Only return tickets belonging to the current user
-            return allTickets.filter(ticket => ticket.userId === currentUser.id);
-        }
+<script>
+  const STORAGE_KEY = 'ticketapp_tickets';
 
-        function saveTickets(tickets) {
-            // Get all existing tickets
-            const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            const currentUser = auth.getCurrentUser() || {};
+  // ============ Storage Helpers ============ //
+  function getTickets() {
+    const user = auth.getCurrentUser() || {};
+    const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return allTickets.filter(t => t.userId === user.id);
+  }
 
-            // Remove all tickets for current user
-            const otherUsersTickets = allTickets.filter(ticket => ticket.userId !== currentUser.id);
+  function saveTickets(tickets) {
+    const user = auth.getCurrentUser() || {};
+    const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const others = allTickets.filter(t => t.userId !== user.id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...others, ...tickets]));
+  }
 
-            // Add the new tickets for current user
-            const updatedTickets = [...otherUsersTickets, ...tickets];
+  // ============ Rendering ============ //
+  const statusStyles = {
+    open: 'bg-green-100 text-green-800 border-green-200',
+    in_progress: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    closed: 'bg-gray-200 text-gray-800 border-gray-300',
+  };
+  const priorityStyles = {
+    low: 'bg-green-100 text-green-800 border-green-200',
+    medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    high: 'bg-red-100 text-red-800 border-red-200',
+  };
 
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTickets));
-        }
+function renderTicketCard(ticket) {
+    // --- SAFER DATE HANDLING ---
+    let timeAgo = 'just now';
+    if (typeof dateFns !== 'undefined' && dateFns.formatDistanceToNow) {
+      try {
+        timeAgo = dateFns.formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true });
+      } catch (e) {
+        timeAgo = new Date(ticket.createdAt).toLocaleDateString(); // Fallback
+      }
+    } else {
+        timeAgo = new Date(ticket.createdAt).toLocaleDateString(); // Fallback
+    }
+    // --- END SAFER DATE HANDLING ---
 
-        function createTicket(ticketData) {
-            const currentUser = auth.getCurrentUser() || {};
-            if (!currentUser || !currentUser.id) {
-                console.error('No user ID found');
-                showToast('You must be logged in to create tickets', 'error');
-                return;
-            }
+    // Basic sanitization
+    const title = (ticket.title || 'Untitled').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const description = (ticket.description || 'No description provided.').replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-            const newTicket = {
-                id: `${currentUser.id}-${Date.now()}`,
-                ...ticketData,
-                createdAt: new Date().toISOString(),
-                userId: currentUser.id
-            };
+    return `
+      <div class="bg-white p-6 rounded-2xl shadow-lg flex flex-col justify-between h-full">
+        <div>
+          <h3 class="text-2xl font-semibold text-[#4B0082] mb-3">${title}</h3>
+          
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+            <span class="px-3 py-1 text-xs font-bold rounded-full capitalize border ${statusStyles[ticket.status] || ''}">${ticket.status.replace('_', ' ')}</span>
+            <span class="px-3 py-1 text-xs font-bold rounded-full capitalize border ${priorityStyles[ticket.priority] || ''}">${ticket.priority}</span>
+            <span class="text-sm text-gray-500">${timeAgo}</span>
+          </div>
 
-            const userTickets = getTickets();
-            userTickets.push(newTicket);
-            saveTickets(userTickets);
-            updateTicketsDisplay();
-            showToast('Ticket created successfully!', 'success');
-        }
+          <p class="text-[#4B0082] mb-6 break-words">${description}</p>
+        </div>
+        
+                <div class="flex justify-end gap-4 border-t border-gray-200 pt-4">
+          <button onclick="editTicket('${ticket.id}')" class="font-medium text-[#e498d1ff] hover:text-[#b64fcfff] focus:outline-none focus:ring-2 focus:ring-[#e498d1ff] rounded px-2">Edit</button>
+          <button onclick="deleteTicket('${ticket.id}')" class="font-medium text-gray-600 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-2">Delete</button>
+        </div>
+      </div>
+    `;
+  }
 
-        function updateTicket(ticketData) {
-            const tickets = getTickets();
-            const index = tickets.findIndex(t => t.id === ticketData.id);
-            if (index !== -1) {
-                tickets[index] = { ...tickets[index], ...ticketData };
-                saveTickets(tickets);
-                updateTicketsDisplay();
-            }
-        }
+  // ============ CRUD Operations ============ //
+  function deleteTicket(id) {
+    let tickets = getTickets();
+    tickets = tickets.filter(t => t.id !== id);
+    saveTickets(tickets);
+    showToast('Ticket deleted', 'success');
+    updateTicketsDisplay();
+    if (typeof window.updateDashboard === 'function') window.updateDashboard();
+  }
 
-        function deleteTicket(ticketId) {
-            if (confirm('Are you sure you want to delete this ticket?')) {
-                const tickets = getTickets();
-                const filteredTickets = tickets.filter(t => t.id !== ticketId);
-                saveTickets(filteredTickets);
-                updateTicketsDisplay();
-            }
-        }
+  function editTicket(id) {
+    const ticket = getTickets().find(t => t.id === id);
+    if (!ticket) return;
 
-        // Style mappings (from React component)
-        const statusStyles = {
-            open: 'bg-color-open text-green-800 border-green-200',
-            in_progress: 'bg-color-progress text-yellow-800 border-yellow-200',
-            closed: 'bg-color-closed text-gray-800 border-gray-200',
-        };
+    if (typeof window.showEditTicketModal === 'function') {
+        window.showEditTicketModal(ticket);
+    } else {
+        console.error('Edit ticket modal function not found.');
+    }
 
-        const priorityStyles = {
-            low: 'bg-green-100 text-green-800 border-green-200',
-            medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            high: 'bg-red-100 text-red-800 border-red-200',
-        };
+    // const modal = document.getElementById('editTicketModal');
+    // modal.classList.remove('hidden');
+    // modal.classList.add('flex');
 
-        function renderTicketCard(ticket) {
-            const statusClass = statusStyles[ticket.status] || statusStyles['closed'];
-            const priorityClass = priorityStyles[ticket.priority] || priorityStyles['low'];
-            const timeAgo = ticket.createdAt ? dateFns.formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true }) : 'just now';
+    // document.getElementById('editTicketId').value = ticket.id;
+    // document.getElementById('editTitle').value = ticket.title;
+    // document.getElementById('editDescription').value = ticket.description;
+    // document.getElementById('editPriority').value = ticket.priority;
+    // document.getElementById('editStatus').value = ticket.status;
+  }
 
-            return `
-                <div class="bg-[#FFFFFF] p-6 rounded-2xl shadow-lg flex flex-col justify-between h-full">
-                    <div>
-                        <h3 class="text-2xl font-semibold text-[#4B0082] mb-3">${ticket.title}</h3>
+  function updateTicketsDisplay() {
+    const container = document.getElementById('ticketsContainer');
+    const noTicketsMessage = document.getElementById('noTicketsMessage');
+    const search = document.getElementById('search').value.toLowerCase();
+    const filter = document.getElementById('statusFilter').value;
 
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
-                            <span class="px-3 py-1 text-xs font-bold rounded-full capitalize border ${statusClass}">${ticket.status.replace('_', ' ')}</span>
-                            <span class="px-3 py-1 text-xs font-bold rounded-full capitalize border ${priorityClass}">${ticket.priority || 'low'}</span>
-                            <span class="text-sm text-gray-500">${timeAgo}</span>
-                        </div>
-                        
-                        <p class="text-[#4B0082] mb-6 break-words">${ticket.description || 'No description provided.'}</p>
-                    </div>
-                    
-                    <div class="flex justify-end gap-4 border-t border-gray-200 pt-4">
-                        <button onclick="handleEditTicket('${ticket.id}')" class="font-medium text-[#e498d1ff] hover:text-[#b64fcfff] focus:outline-none focus:ring-2 focus:ring-[#e498d1ff] rounded px-2">Edit</button>
-                        <button onclick="deleteTicket('${ticket.id}')" class="font-medium text-statusGray hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-2">Delete</button>
-                    </div>
-                </div>
-            `;
-        }
+    let tickets = getTickets()
+      .filter(t => 
+        (t.title.toLowerCase().includes(search) || (t.description || '').toLowerCase().includes(search)) &&
+        (filter === 'all' || t.status === filter)
+      )
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        function updateTicketsDisplay() {
-            const container = document.getElementById('ticketsContainer');
-            const noTicketsMessage = document.getElementById('noTicketsMessage');
-            const searchTerm = document.getElementById('search')?.value?.toLowerCase() || '';
-            const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+    if (tickets.length === 0) {
+      container.innerHTML = '';
+      noTicketsMessage.classList.remove('hidden');
+    } else {
+      noTicketsMessage.classList.add('hidden');
+      container.innerHTML = tickets.map(renderTicketCard).join('');
+    }
+  }
 
-            // Always get fresh tickets from storage
-            let tickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            const currentUser = auth.getCurrentUser() || {};
-            
-            // Filter tickets by current user
-            tickets = tickets.filter(ticket => ticket.userId === currentUser.id);
-            
-            // Apply search and status filters
-            tickets = tickets.filter(ticket => {
-                const matchesSearch = ticket.title.toLowerCase().includes(searchTerm) ||
-                                    (ticket.description || '').toLowerCase().includes(searchTerm);
-                const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-                return matchesSearch && matchesStatus;
-            });
+  // ============ Listeners ============ //
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!auth.isAuthenticated()) {
+      window.location.href = '/auth/login?redirect=/tickets';
+      return;
+    }
 
-            // Sort tickets by creation date (newest first)
-            tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    document.getElementById('createTicketBtn').addEventListener('click', () => {
+      if (typeof window.showCreateTicketModalComponent === 'function') {
+        window.showCreateTicketModalComponent();
+      }
+    });
 
-            if (tickets.length === 0) {
-                container.innerHTML = '';
-                noTicketsMessage.classList.remove('hidden');
-            } else {
-                noTicketsMessage.classList.add('hidden');
-                container.innerHTML = tickets.map(ticket => renderTicketCard(ticket)).join('');
-            }
-        }
+    document.getElementById('search').addEventListener('input', updateTicketsDisplay);
+    document.getElementById('statusFilter').addEventListener('change', updateTicketsDisplay);
 
-        // Modal Management
-        const editModal = document.getElementById('editTicketModal');
-        const createBtn = document.getElementById('createTicketBtn');
-        const closeEditBtn = document.getElementById('closeEditModalBtn');
-        const editForm = document.getElementById('editTicketForm');
-        const searchInput = document.getElementById('search');
-        const statusFilter = document.getElementById('statusFilter');
+    // Expose for modal refresh
+    window.updateTicketsDisplay = updateTicketsDisplay;
 
-        // Use the component's showCreateTicketModalComponent function
-        createBtn.addEventListener('click', () => {
-            window.showCreateTicketModalComponent();
-        });
-
-        closeEditBtn.addEventListener('click', () => {
-            editModal.classList.add('hidden');
-            editModal.classList.remove('flex');
-        });
-
-        editForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(editForm);
-            updateTicket(Object.fromEntries(formData));
-            editModal.classList.add('hidden');
-            editModal.classList.remove('flex');
-            alert('Ticket updated successfully!');
-        });
-
-        function handleEditTicket(ticketId) {
-            const ticket = getTickets().find(t => t.id === ticketId);
-            if (ticket) {
-                document.getElementById('editTicketId').value = ticket.id;
-                document.getElementById('editTitle').value = ticket.title;
-                document.getElementById('editDescription').value = ticket.description;
-                document.getElementById('editPriority').value = ticket.priority;
-                document.getElementById('editStatus').value = ticket.status;
-                
-                editModal.classList.remove('hidden');
-                editModal.classList.add('flex');
-            }
-        }
-
-        // Search and Filter
-        searchInput.addEventListener('input', updateTicketsDisplay);
-        statusFilter.addEventListener('change', updateTicketsDisplay);
-
-        // Close modals when clicking outside
-        [createModal, editModal].forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                }
-            });
-        });
-
-        // Initialize display
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check authentication
-            if (!auth.isAuthenticated()) {
-                window.location.href = '/auth/login?redirect=/tickets';
-                return;
-            }
-
-            // Set up initial tickets display
-            updateTicketsDisplay();
-
-            // Make sure create ticket button is visible
-            const createButton = document.getElementById('createTicketBtn');
-            if (createButton) {
-                createButton.classList.remove('hidden');
-                createButton.style.display = createButton.style.display || 'inline-block';
-                createButton.disabled = false;
-            }
-
-            // Ensure create and edit submit buttons are visible and clickable
-            const createSubmit = document.getElementById('createTicketSubmit');
-            if (createSubmit) {
-                createSubmit.classList.remove('hidden');
-                createSubmit.style.pointerEvents = 'auto';
-                createSubmit.disabled = false;
-            }
-            const editSubmit = document.getElementById('editTicketSubmit');
-            if (editSubmit) {
-                editSubmit.classList.remove('hidden');
-                editSubmit.style.pointerEvents = 'auto';
-                editSubmit.disabled = false;
-            }
-        });
-    </script>
+    updateTicketsDisplay();
+  });
+</script>
 {% endblock %}

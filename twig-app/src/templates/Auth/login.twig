@@ -94,33 +94,33 @@
                 return isValid;
             }
 
+            // ... inside login.twig script ...
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
                 const formData = new FormData(loginForm);
                 const email = formData.get('email');
                 const password = formData.get('password');
 
                 if (!validateForm(email, password)) {
+                    // Use the global toast
+                    window.showToast('Please fix the errors in the form.', 'error');
                     return;
                 }
 
                 try {
-                    // Attempt login first
                     await auth.login(email, password);
                     
-                    // Only redirect after successful login
+                    // Get redirect URL from query parameters
                     const queryParams = new URLSearchParams(window.location.search);
                     const redirectUrl = queryParams.get('redirect') || '/dashboard';
                     
-                    showToast('Login successful!', 'success');
+                    window.showToast('Login successful!', 'success');
                     window.location.href = redirectUrl;
+
                 } catch (error) {
-                    if (error.message === 'Invalid email or password.') {
-                        showError(emailError, 'Invalid email or password.');
-                    } else {
-                        showToast(error.message || 'Login failed. Please try again.', 'error');
-                    }
+                    // --- USE THE NEW GLOBAL HANDLER ---
+                    // It will automatically show the correct toast message
+                    auth.handleApiError(error, 'Login failed. Please retry.');
                 }
             });
 

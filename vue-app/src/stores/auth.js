@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watchEffect } from 'vue'; // 1. Import watchEffect
 import { defineStore } from 'pinia';
 import { useRouter } from 'vue-router';
 import { api } from '../services/api';
@@ -13,12 +13,73 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
   const user = ref(null);
   const token = ref(localStorage.getItem(SESSION_KEY));
-  const loading = ref(true); // Initial loading state
+  const loading = ref(true);
 
-  // Computed property like React's derived state
+  // --- Inactivity Timer State ---
+  const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+  const inactivityTimerRef = ref(null);
+  const activityEvents = [
+    'mousemove',
+    'keydown',
+    'click',
+    'scroll',
+    'touchstart',
+  ];
+
+  // Computed property
   const isAuthenticated = computed(() => !!token.value);
 
-  // Equivalent to useEffect on mount / token change
+  // --- Actions ---
+
+  function logout(showToast = true) {
+    user.value = null;
+    token.value = null;
+    localStorage.removeItem(SESSION_KEY);
+    router.push('/');
+    if (showToast) {
+      toast.success('Logged out.');
+    }
+  }
+
+  // --- Inactivity Helper Functions ---
+  function resetTimer() {
+    if (inactivityTimerRef.value) {
+      clearTimeout(inactivityTimerRef.value);
+    }
+    inactivityTimerRef.value = setTimeout(() => {
+      toast.error('You have been logged out due to inactivity.');
+      logout(false); // Call the store's own logout action
+    }, INACTIVITY_TIMEOUT_MS);
+  }
+
+  function handleActivity() {
+    resetTimer();
+  }
+
+  // --- Watcher for Inactivity (Vue's useEffect equivalent) ---
+  watchEffect((onCleanup) => {
+    // This function runs immediately and whenever 'token.value' changes
+
+    if (token.value) {
+      // User is logged in, start listening
+      activityEvents.forEach((event) => {
+        window.addEventListener(event, handleActivity);
+      });
+      resetTimer(); // Start the timer
+
+      // onCleanup is Vue's way of handling "cleanup" from useEffect
+      onCleanup(() => {
+        activityEvents.forEach((event) => {
+          window.removeEventListener(event, handleActivity);
+        });
+        if (inactivityTimerRef.value) {
+          clearTimeout(inactivityTimerRef.value);
+        }
+      });
+    }
+  });
+
+  // --- Initialization ---
   function initializeAuth() {
     if (token.value) {
       const userId = token.value.split('mock-token-')[1];
@@ -27,8 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (foundUser) {
         user.value = foundUser;
       } else {
-        // Token is invalid, clear it
-        logout(false); // Pass false to prevent showing toast on initial load
+        logout(false); // Token is invalid, clear it without toast
       }
     } else {
       user.value = null;
@@ -36,10 +96,9 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = false;
   }
 
-  // Call initialization once
-  initializeAuth();
+  initializeAuth(); // Call initialization
 
-  // --- Actions ---
+  // --- Other Actions ---
   function handleApiError(error, genericMessage) {
     console.error("API Error:", error);
     if (error.message === 'Invalid token.' || error.message === 'No token provided.') {
@@ -78,15 +137,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function logout(showToast = true) {
-    user.value = null;
-    token.value = null;
-    localStorage.removeItem(SESSION_KEY);
-    router.push('/');
-    if (showToast) {
-      toast.success('Logged out.');
-    }
-  }
-
-  return { user, token, loading, isAuthenticated, login, signup, logout, handleApiError, initializeAuth };
+  return { 
+    user, 
+    token, 
+    loading, 
+    isAuthenticated, 
+    login, 
+    signup, 
+    logout, 
+    handleApiError, 
+    initializeAuth 
+  };
 });

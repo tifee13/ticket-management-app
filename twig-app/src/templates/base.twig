@@ -49,6 +49,7 @@
     </head>
 
     <body>
+    
         <header class="bg-[#7f49a7ff] shadow-md">
             <nav class="app-container flex justify-between items-center h-24">
                 <a href="/" class="text-4xl font-bold text-[#4B0082]">
@@ -66,10 +67,10 @@
                         Logout
                     </button>
 
-                    <a href="/auth/login" class=" text-[#eebff0ff] hover:text-[#4B0082]">
+                    <a href="/auth/login" class=" text-[#eebff0ff] hover:text-[#4B0082] no-auth-nav-item">
                         Login
                     </a>
-                    <a href="/auth/signup" class=" px-5 py-2 bg-[#FFFFFF] text-[#7f49a7ff] rounded-lg font-semibold hover:bg-[#4B0082] hover:text-[#FFFFFF] transition-colors">
+                    <a href="/auth/signup" class=" px-5 py-2 bg-[#FFFFFF] text-[#7f49a7ff] rounded-lg font-semibold hover:bg-[#4B0082] hover:text-[#FFFFFF] transition-colors no-auth-nav-item">
                         Sign up
                     </a>
                 </div>
@@ -84,29 +85,11 @@
                 </div>
             </nav>
 
-            {# Mobile Menu #}
-            <div class="mobile-menu hidden md:hidden">
-                <nav class="fixed inset-0 bg-[#7f49a7ff] z-50 flex flex-col items-center justify-center space-y-8">
-                    <button type="button" class="absolute top-7 right-6 text-[#4B0082] mobile-menu-close">
-                        <span class="sr-only -m-2.5 p-2.5 text-[#eebff0ff]">Close menu</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                    
-                    <a href="/dashboard" data-auth-required="true" class="auth-nav-item hidden text-2xl text-[#eebff0ff] hover:text-[#4B0082]">Dashboard</a>
-                    <a href="/tickets" data-auth-required="true" class="auth-nav-item hidden text-2xl text-[#eebff0ff] hover:text-[#4B0082]">Tickets</a>
-                    <button type="button" data-auth-required="true" class="auth-nav-item hidden text-2xl text-[#eebff0ff] hover:text-[#4B0082] logout-btn">Logout</button>
-                    
-                    <a href="/auth/login" class="no-auth-nav-item text-2xl text-[#eebff0ff] hover:text-[#4B0082]">Login</a>
-                    <a href="/auth/signup" class="no-auth-nav-item text-2xl text-[#eebff0ff] hover:text-[#4B0082]">Sign up</a>
-                </nav>
-            </div>
         </header>
+        {% include 'components/mobilemenu.twig' %}
 
         <main class="grow app-container py-8">
             {% block content %}
-                {# Main content goes here from extended templates #}
             {% endblock %}
         </main>
 
@@ -149,24 +132,26 @@
                     const requiresAuth = {{ requiresAuth|default(false) ? 'true' : 'false' }};
                     
                     if (requiresAuth && !auth.isAuthenticated()) {
-                        const currentPath = window.location.pathname;
+                    const currentPath = window.location.pathname;
+                    showToast("You must log in to access this page.", "error");
+                    setTimeout(() => {
                         window.location.href = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
-                        return;
+                    }, 800);
+                    return;
                     }
+
 
                     // Mobile menu functionality
                     const mobileMenuButton = document.querySelector('.mobile-menu-button');
-                    const mobileMenuClose = document.querySelector('.mobile-menu-close');
-                    const mobileMenu = document.querySelector('.mobile-menu');
 
                     mobileMenuButton?.addEventListener('click', function() {
-                        mobileMenu.classList.remove('hidden');
+                        // Call the global function from 'components/mobilemenu.twig'
+                        if (typeof window.showMobileMenu === 'function') {
+                            window.showMobileMenu();
+                        } else {
+                            console.error('Mobile menu component not loaded.');
+                        }
                     });
-
-                    mobileMenuClose?.addEventListener('click', function() {
-                        mobileMenu.classList.add('hidden');
-                    });
-
                     // Update navigation based on auth state
                     const user = auth.getCurrentUser();
                     const authNavItems = document.querySelectorAll('.auth-nav-item');
@@ -197,7 +182,8 @@
                     document.querySelectorAll('.logout-btn').forEach(btn => {
                         btn.addEventListener('click', () => {
                             auth.logout();
-                            window.location.href = '/';
+                            showToast('Logged out successfully.', 'success');
+                            setTimeout(() => window.location.href = '/', 500);
                         });
                     });
                 });

@@ -32,9 +32,23 @@ switch($path) {
 
     case '/dashboard':
     case '/tickets':
-        // These routes will be handled by client-side auth redirect
-        echo $twig->render($path === '/dashboard' ? 'dashboard.twig' : 'ticketmanagement.twig', [
-            'title' => ($path === '/dashboard' ? "Dashboard" : "Tickets") . " - Fix & Fast",
+        // --- Server-side auth protection ---
+        // We check for the session cookie. If it doesn't exist, redirect immediately.
+        $isAuthenticated = isset($_COOKIE['ticketapp_session']);
+
+        if (!$isAuthenticated) {
+            // Not logged in. Send a redirect header and stop.
+            // This happens before any HTML is sent, eliminating the flash.
+            $redirectUrl = "/auth/login?redirect=" . urlencode($path);
+            header("Location: " . $redirectUrl);
+            exit;
+        }
+        // --- End server-side protection ---
+
+        // If we get here, the user is authenticated.
+        // Go ahead and render the protected page.
+        echo $twig->render($path === '/dashboard'? 'dashboard.twig': 'ticketmanagement.twig', [
+            'title' => ($path === '/dashboard'? "Dashboard": "Tickets"). " - Fix & Fast",
             'requiresAuth' => true
         ]);
         break;

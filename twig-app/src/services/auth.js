@@ -8,13 +8,9 @@ const initStorage = () => {
   if (!localStorage.getItem(USERS_KEY)) {
     localStorage.setItem(USERS_KEY, JSON.stringify([]));
   }
-
-  // Ensure the main tickets storage exists and is empty by default
   if (!localStorage.getItem(TICKETS_KEY)) {
     localStorage.setItem(TICKETS_KEY, JSON.stringify([]));
   }
-
-  // Seed sample/demo tickets in a separate key so they are read-only and not merged with user tickets
   if (!localStorage.getItem(SAMPLE_TICKETS_KEY)) {
     localStorage.setItem(SAMPLE_TICKETS_KEY, JSON.stringify([
       { id: 't1', title: 'Fix login button', description: 'The login button is not working on mobile.', status: 'open', priority: 'high', createdAt: new Date().toISOString() },
@@ -24,7 +20,6 @@ const initStorage = () => {
   }
 };
 
-// Initialize storage on script load
 initStorage();
 
 const auth = {
@@ -46,35 +41,38 @@ const auth = {
     const user = users.find(user => user.id === userId);
     if (!user) return null;
     
-    // Return user without sensitive data
     const { password, ...safeUser } = user;
     return safeUser;
   },
 
   async login(email, password) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-          const normalizedEmail = email.toLowerCase();
-          const user = users.find(u => u.email === normalizedEmail && u.password === password);
-          
-          if (user) {
-            const token = `mock-token-${user.id}`;
-            localStorage.setItem(SESSION_KEY, token);
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          try {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const normalizedEmail = email.toLowerCase();
+            const user = users.find(u => u.email === normalizedEmail && u.password === password);
             
-            // Return user without sensitive data
-            const { password, ...safeUser } = user;
-            resolve({ ...safeUser, token });
-          } else {
-            reject(new Error('Invalid email or password.'));
+            if (user) {
+              const token = `mock-token-${user.id}`;
+              localStorage.setItem(SESSION_KEY, token);
+              
+              // --- THIS IS THE FIX ---
+              // Set a cookie for the server-side PHP check
+              document.cookie = "ticketapp_session=true; path=/; max-age=86400"; // 86400 seconds = 1 day
+              // ---------------------
+
+              const { password, ...safeUser } = user;
+              resolve({ ...safeUser, token });
+            } else {
+              reject(new Error('Invalid email or password.'));
+            }
+          } catch (error) {
+            reject(new Error('Login failed. Please try again.'));
           }
-        } catch (error) {
-          reject(new Error('Login failed. Please try again.'));
-        }
-      }, 500);
-    });
-  },
+        }, 500);
+      });
+    },
 
   async signup(email, password, name = '') {
     return new Promise((resolve, reject) => {
@@ -96,16 +94,15 @@ const auth = {
             createdAt: new Date().toISOString()
           };
 
-          // Store user
           users.push(newUser);
           localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
-          // Create session
+          // --- ✅ FIX: Added backticks (`) ---
           const token = `mock-token-${newUser.id}`;
           localStorage.setItem(SESSION_KEY, token);
           
-          // Return user without sensitive data
           const { password: _, ...safeUser } = newUser;
+          window.dispatchEvent(new CustomEvent('authChange', { detail: { user: safeUser } }));
           resolve({ ...safeUser, token });
         } catch (error) {
           reject(new Error('Failed to create account. Please try again.'));
@@ -115,18 +112,28 @@ const auth = {
   },
 
   logout() {
-    try {
-      localStorage.removeItem(SESSION_KEY);
-      
-      // Redirect to login page and preserve any redirect parameter
-      const currentUrl = new URL(window.location.href);
-      const redirect = currentUrl.searchParams.get('redirect');
-      const loginUrl = redirect ? `/auth/login?redirect=${encodeURIComponent(redirect)}` : '/auth/login';
-      
-      window.location.href = loginUrl;
-    } catch (error) {
-      console.error('Logout failed:', error);
-      window.location.href = '/auth/login';
+      try {
+          localStorage.removeItem(SESSION_KEY);
+
+          document.cookie = "ticketapp_session=; path=/; max-age=0";
+          
+      } catch (error) {
+          console.error('Logout failed:', error);
+      }
+  },
+
+  handleApiError(error, genericMessage) {
+    console.error("API Error:", error);
+
+    if (error.message === 'Invalid token.' || error.message === 'No token provided.') {
+      window.showToast('Your session has expired — please log in again.', 'error');
+      auth.logout(); 
+    } else if (error.message === 'Invalid email or password.') {
+      window.showToast('Invalid email or password.', 'error'); 
+    } else if (error.message === 'User already exists.') {
+      window.showToast('This email is already registered.', 'error');
+    } else {
+      window.showToast(genericMessage || error.message || 'An unknown error occurred.', 'error');
     }
   }
 };

@@ -1,0 +1,277 @@
+{# This is the dashboard template, extend it from the base template #}
+{% extends "base.twig" %}
+
+{# Set this page as requiring authentication #}
+{% set requiresAuth = true %}
+
+{% block title %}Dashboard - Fix & Fast{% endblock %}
+
+{% block styles %}
+    {{ parent() }}
+{% endblock %}
+
+{% block content %}
+    <div class="space-y-8 p-6">
+        <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <h1 class="text-5xl font-bold text-color-text">Dashboard</h1>
+            <button
+                id="createTicketBtn"
+                class="px-6 py-3 bg-[#e498d1ff] text-white rounded-lg font-semibold hover:opacity-80 w-full md:w-auto"
+            >
+                Create New Ticket
+            </button>
+        </div>
+
+        {# Stats Overview Card #}
+        <div class="bg-white p-6 rounded-3xl shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="text-center md:text-left mb-6 md:mb-0">
+                    <h2 class="text-2xl font-semibold text-color-text">Ticket Status</h2>
+                    <p id="totalTickets" class="text-6xl font-bold text-color-text mt-4">0</p>
+                    <p class="text-xl text-color-text">Total Tickets</p>
+                </div>
+                
+                <div style="width: 200px; height: 150px;">
+                    <canvas id="ticketsPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        {# Stats Cards #}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-lg text-center">
+                <h3 id="openTickets" class="text-5xl font-bold text-color-open">0</h3>
+                <p class="text-xl text-color-text mt-2">Open</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-lg text-center">
+                <h3 id="inProgressTickets" class="text-5xl font-bold text-color-progress">0</h3>
+                <p class="text-xl text-color-text mt-2">In Progress</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-lg text-center">
+                <h3 id="closedTickets" class="text-5xl font-bold text-color-closed">0</h3>
+                <p class="text-xl text-color-text mt-2">Closed</p>
+            </div>
+        </div>
+
+        {# Recent Tickets #}
+        <div class="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4 text-color-text">Recent Tickets</h2>
+            <div id="recentTickets" class="space-y-4">
+                <p class="text-color-text">Loading tickets...</p>
+            </div>
+        </div>
+    </div>
+
+    {# Create Ticket Modal #}
+    <div id="createTicketModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center">
+        <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-color-text">Create New Ticket</h2>
+                <button class="text-gray-500 hover:text-gray-700" id="closeModalBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="createTicketForm" class="space-y-4">
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+                    <input type="text" id="title" name="title" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]">
+                </div>
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="description" name="description" rows="4" required
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]"></textarea>
+                </div>
+                <div>
+                    <label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                    <select id="priority" name="priority" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#e498d1ff] focus:ring-[#e498d1ff]">
+                        <option value="" disabled selected>Select priority</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <button type="submit" id="createTicketSubmit"
+                        class="w-full px-4 py-2 bg-[#e498d1ff] text-white rounded-lg font-semibold hover:opacity-80">
+                    Create Ticket
+                </button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.30.0/date-fns.min.js"></script>
+    <script>
+        // Local Storage Management
+            const STORAGE_KEY = 'ticketapp_tickets';
+        
+        function getTickets() {
+                const currentUser = auth.getCurrentUser() || {};
+            const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            // Only return tickets belonging to the current user
+            return allTickets.filter(ticket => ticket.userId === currentUser.id);
+        }
+
+        function saveTickets(tickets) {
+            const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                const currentUser = auth.getCurrentUser() || {};
+            
+            // Remove all tickets for current user
+            const otherUsersTickets = allTickets.filter(ticket => ticket.userId !== currentUser.id);
+            
+            // Add the new tickets for current user
+            const updatedTickets = [...otherUsersTickets, ...tickets];
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTickets));
+        }
+
+        function createTicket(ticketData) {
+                const currentUser = auth.getCurrentUser() || {};
+            if (!currentUser.id) {
+                console.error('No user ID found');
+                return;
+            }
+            
+            const newTicket = {
+                    id: `${currentUser.id}-${Date.now()}`,
+                ...ticketData,
+                status: 'open',
+                createdAt: new Date().toISOString(),
+                userId: currentUser.id
+            };
+            
+            const userTickets = getTickets();
+            userTickets.push(newTicket);
+            saveTickets(userTickets);
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            let tickets = getTickets();
+            const currentUser = auth.getCurrentUser() || {};
+            
+            // Filter tickets by current user (getTickets already scopes but keep safe)
+            tickets = tickets.filter(ticket => ticket.userId === currentUser.id);
+            
+            const stats = {
+                total: tickets.length,
+                open: tickets.filter(t => t.status === 'open').length,
+                in_progress: tickets.filter(t => t.status === 'in_progress').length,
+                closed: tickets.filter(t => t.status === 'closed').length
+            };
+
+            // Update stats display
+            document.getElementById('totalTickets').textContent = stats.total;
+            document.getElementById('openTickets').textContent = stats.open;
+            document.getElementById('inProgressTickets').textContent = stats.in_progress;
+            document.getElementById('closedTickets').textContent = stats.closed;
+
+            // Update pie chart
+            if (window.ticketsChart) {
+                window.ticketsChart.data.datasets[0].data = [stats.open, stats.in_progress, stats.closed];
+                window.ticketsChart.update();
+            } else {
+                const ctx = document.getElementById('ticketsPieChart').getContext('2d');
+                window.ticketsChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Open', 'In Progress', 'Closed'],
+                        datasets: [{
+                            data: [stats.open, stats.in_progress, stats.closed],
+                            backgroundColor: ['#34d399', '#f59e0b', '#6b7280']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            // Update recent tickets
+            const recentTicketsContainer = document.getElementById('recentTickets');
+            const sortedTickets = [...tickets].sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+            ).slice(0, 5);
+
+            if (sortedTickets.length === 0) {
+                recentTicketsContainer.innerHTML = '<p class="text-color-text">No recent tickets.</p>';
+            } else {
+                recentTicketsContainer.innerHTML = sortedTickets.map(ticket => `
+                    <div class="border-b border-gray-200 pb-3 last:border-b-0">
+                        <a href="/tickets" class="font-semibold text-[#e498d1ff] hover:underline">
+                            ${ticket.title}
+                        </a>
+                        <p class="text-sm text-gray-500">
+                            Created ${dateFns.formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+                        </p>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Modal functionality
+        const modal = document.getElementById('createTicketModal');
+        const openModalBtn = document.getElementById('createTicketBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const createTicketForm = document.getElementById('createTicketForm');
+
+        openModalBtn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        });
+
+        createTicketForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(createTicketForm);
+            const ticketData = Object.fromEntries(formData);
+            
+            createTicket(ticketData);
+            createTicketForm.reset();
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            alert('Ticket created successfully!');
+        });
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure the Create Ticket button is visible (some styles or templates might hide it)
+            const createButton = document.getElementById('createTicketBtn');
+            if (createButton) {
+                createButton.classList.remove('hidden');
+                // Make sure it is visually on top if a z-index issue hides it
+                createButton.style.zIndex = createButton.style.zIndex || '10';
+                createButton.style.display = createButton.style.display || 'inline-block';
+                createButton.disabled = false;
+            }
+
+            // Ensure create submit button inside modal is visible and clickable
+            const createSubmit = document.getElementById('createTicketSubmit');
+            if (createSubmit) {
+                createSubmit.classList.remove('hidden');
+                createSubmit.style.pointerEvents = 'auto';
+                createSubmit.disabled = false;
+            }
+
+            updateDashboard();
+        });
+    </script>
+{% endblock %}

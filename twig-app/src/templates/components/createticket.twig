@@ -1,0 +1,212 @@
+<!-- Create Ticket Modal (component) -->
+<div id="createTicketModalComponent" class="fixed inset-0 z-50 hidden justify-center items-center bg-black/50 p-4">
+  <div class="bg-[#eebff0ff] w-full max-w-lg p-8 rounded-2xl shadow-2xl">
+    <h2 class="text-3xl font-bold mb-6 text-[#4B0082]">
+      Create New Ticket
+    </h2>
+    
+  <form id="createTicketFormComponent" class="space-y-4">
+      <div>
+        <label class="block text-lg font-medium mb-2" for="title">Title *</label>
+        <input 
+          type="text" 
+          id="title"
+          name="title"
+          class="w-full px-4 py-3 border bg-[#FFFFFF] border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
+        />
+        <p class="text-red-500 text-sm mt-1 hidden" data-error="title"></p>
+      </div>
+
+      <div>
+        <label class="block text-lg font-medium mb-2" for="description">Description</label>
+        <textarea 
+          id="description"
+          name="description"
+          rows="3"
+          class="w-full px-4 py-3 border bg-[#FFFFFF] border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
+        ></textarea>
+        <p class="text-red-500 text-sm mt-1 hidden" data-error="description"></p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-lg font-medium mb-2" for="status">Status *</label>
+          <select 
+            id="status"
+            name="status"
+            class="w-full px-4 py-3 border bg-[#FFFFFF] border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
+          >
+            <option value="" disabled selected>Select a status</option> 
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="closed">Closed</option>
+          </select>
+          <p class="text-red-500 text-sm mt-1 hidden" data-error="status"></p>
+        </div>
+
+        <div>
+          <label class="block text-lg font-medium mb-2" for="priority">Priority *</label>
+          <select 
+            id="priority"
+            name="priority"
+            class="w-full px-4 py-3 bg-[#FFFFFF] border border-[#b64fcfff] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e498d1ff]"
+          >
+            <option value="" disabled selected>Select a priority</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <p class="text-red-500 text-sm mt-1 hidden" data-error="priority"></p>
+        </div>
+      </div>
+      
+      <div class="flex justify-end gap-4 pt-4">
+        <button 
+          type="button" 
+          id="cancelCreateTicketComponent"
+          class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit"
+          id="createTicketSubmitComponent"
+          class="px-6 py-2 bg-[#e498d1ff] text-white rounded-lg font-semibold hover:opacity-80"
+        >
+          Create Ticket
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('createTicketModalComponent');
+  const form = document.getElementById('createTicketFormComponent');
+  const cancelBtn = document.getElementById('cancelCreateTicketComponent');
+  
+  // Form validation constants
+  const ALLOWED_STATUSES = ["open", "in_progress", "closed"];
+  const ALLOWED_PRIORITIES = ["low", "medium", "high"];
+  
+  function showError(field, message) {
+    const errorElement = form.querySelector(`[data-error="${field}"]`);
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.classList.remove('hidden');
+    }
+  }
+  
+  function clearErrors() {
+    form.querySelectorAll('[data-error]').forEach(el => {
+      el.textContent = '';
+      el.classList.add('hidden');
+    });
+  }
+  
+  function validate(values) {
+    clearErrors();
+    let isValid = true;
+    
+    if (!values.title) {
+      showError('title', 'Title is mandatory.');
+      isValid = false;
+    }
+    
+    if (!values.status) {
+      showError('status', 'Status is mandatory.');
+      isValid = false;
+    } else if (!ALLOWED_STATUSES.includes(values.status)) {
+      showError('status', 'Status must be one of: open, in_progress, closed.');
+      isValid = false;
+    }
+    
+    if (!values.priority) {
+      showError('priority', 'Priority is mandatory.');
+      isValid = false;
+    } else if (!ALLOWED_PRIORITIES.includes(values.priority)) {
+      showError('priority', 'Priority must be one of: low, medium, high.');
+      isValid = false;
+    }
+    
+    if (values.description && values.description.length > 500) {
+      showError('description', 'Description must be 500 characters or less.');
+      isValid = false;
+    }
+    
+    return isValid;
+  }
+  
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    form.reset();
+    clearErrors();
+  }
+  
+  // Show modal function (to be called from parent)
+  window.showCreateTicketModalComponent = function() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  };
+  
+  // Close modal when clicking cancel
+  cancelBtn.addEventListener('click', closeModal);
+  
+  // Close modal when clicking outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+  
+  // Handle form submission
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    const values = {
+      title: formData.get('title'),
+      description: formData.get('description'),
+      status: formData.get('status'),
+      priority: formData.get('priority'),
+    };
+    
+    if (validate(values)) {
+      // Create a new ticket and save to centralized ticket storage with user scoping
+      const currentUser = auth.getCurrentUser() || {};
+      if (!currentUser.id) {
+        window.showToast('You must be logged in to create tickets.', 'error');
+        return;
+      }
+
+      const ticket = {
+        ...values,
+        id: `${currentUser.id}-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        userId: currentUser.id
+      };
+
+      const STORAGE_KEY = 'ticketapp_tickets';
+      const allTickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      allTickets.push(ticket);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allTickets));
+
+      // Show success message using toast
+      window.showToast('Ticket created successfully!', 'success');
+
+      // Close modal and refresh tickets list / dashboard
+      closeModal();
+      if (typeof window.updateTicketsDisplay === 'function') {
+        window.updateTicketsDisplay();
+      }
+      if (typeof window.updateDashboard === 'function') {
+        window.updateDashboard();
+      }
+    } else {
+      window.showToast('Please fix the form errors.', 'error');
+    }
+  });
+});
+</script>

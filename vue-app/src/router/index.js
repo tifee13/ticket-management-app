@@ -5,7 +5,7 @@ import SignupView from '../views/Auth/SignupView.vue';
 import DashboardView from '../views/DashboardView.vue';
 import TicketManagementView from '../views/TicketManagementView.vue';
 import NotFoundView from '../views/NotFoundView.vue'; // Create this simple component
-import { useAuthStore } from '../stores/auth'; // We'll create this next
+import { useAuthStore } from '../stores/auth'; 
 
 const routes = [
   { path: '/', name: 'Landing', component: LandingView },
@@ -23,7 +23,13 @@ const routes = [
     component: TicketManagementView,
     meta: { requiresAuth: true } // Mark as protected
   },
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView }
+
+  {
+    path: '/:catchAll(.*)',
+    name: 'NotFound',
+    component: NotFoundView,
+  },
+
 ];
 
 const router = createRouter({

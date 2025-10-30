@@ -7,6 +7,7 @@ import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
 import Dashboard from './pages/Dashboard';
 import TicketManagement from './pages/TicketManagement';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
